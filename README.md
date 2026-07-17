@@ -467,3 +467,5 @@ The source code is for authorized internal company use only.
 ## Author
 
 Developed for **CTS Nordics** by **Vytautas Labanauskas** to automate subcontractor activity reporting and Power BI dashboard generation from Infobric workforce data. 
+
+huh
