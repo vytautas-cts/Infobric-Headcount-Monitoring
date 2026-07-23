@@ -11,3 +11,5 @@ __pycache__/
 # Ignore states files
 states/*
 !states/.gitkeep
+
+local.settings.json
