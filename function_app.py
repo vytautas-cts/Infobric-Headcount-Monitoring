@@ -11,11 +11,10 @@ using Azure Functions Timer Trigger.
 ---------------------------------------------------
 """
 
+import logging
 import azure.functions as func
 
 from monitor import run_monitor
-
-import logging
 
 
 app = func.FunctionApp()
@@ -24,7 +23,7 @@ app = func.FunctionApp()
 @app.timer_trigger(
     schedule="0 */5 * * * *",
     arg_name="timer",
-    run_on_startup=False,
+    run_on_startup=True,   # TEMPORARY: run immediately after startup
     use_monitor=True
 )
 def infobric_headcount_monitor(timer: func.TimerRequest) -> None:
@@ -34,20 +33,31 @@ def infobric_headcount_monitor(timer: func.TimerRequest) -> None:
     Runs every 5 minutes.
     """
 
-    logging.info(
-        "Infobric headcount monitor started."
+    logging.warning(
+        "========== INFOBRIC TIMER TRIGGER FIRED =========="
     )
+
+    if timer.past_due:
+        logging.warning(
+            "Timer is running late."
+        )
 
     try:
 
+        logging.warning(
+            "Starting Infobric headcount monitor..."
+        )
+
         run_monitor()
 
-        logging.info(
+        logging.warning(
             "Infobric headcount monitor completed successfully."
         )
 
-    except Exception as e:
+    except Exception:
 
         logging.exception(
-            f"Infobric monitor failed: {e}"
+            "Infobric monitor failed."
         )
+
+        raise
