@@ -36,7 +36,7 @@ def headcount_changed(site, count):
 
     print(
         f"[{timestamp()}] "
-        f"👷 People on the {site} site: {count} "
+        f"People on the {site} site: {count} "
     )
 
 
@@ -47,7 +47,7 @@ def sharepoint_updated(site):
 
     print(
         f"[{timestamp()}] "
-        f"✓ {site} headcount updated in SharePoint"
+        f"{site} headcount updated in SharePoint"
     )
 
 
@@ -58,7 +58,7 @@ def warning(message):
 
     print(
         f"[{timestamp()}] "
-        f"⚠ {message}"
+        f"{message}"
     )
 
 
@@ -69,5 +69,5 @@ def error(message):
 
     print(
         f"[{timestamp()}] "
-        f"❌ ERROR: {message}"
+        f"ERROR: {message}"
     )

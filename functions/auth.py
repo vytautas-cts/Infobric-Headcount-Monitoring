@@ -121,7 +121,7 @@ def login_infobric():
 
     context.close()
 
-    print("✓ Infobric session saved.")
+    print("Infobric session saved.")
 
 
 # --------------------------------------------------
@@ -134,11 +134,11 @@ def ensure_logins():
 
     if infobric_session_valid():
 
-        print("✓ Infobric session valid")
+        print("Infobric session valid")
 
     else:
 
-        print("✗ Infobric login required")
+        print("Infobric login required")
 
         login_infobric()
 

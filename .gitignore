@@ -13,3 +13,4 @@ states/*
 !states/.gitkeep
 
 local.settings.json
+.python_packages

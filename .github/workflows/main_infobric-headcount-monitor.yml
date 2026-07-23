@@ -1,15 +1,13 @@
-name: Build and deploy Python project to Azure Function App - infobric-headcount-monitor
+name: Deploy Python Azure Function
 
 on:
   push:
     branches:
       - azure-function
-
   workflow_dispatch:
 
 
 env:
-  AZURE_FUNCTIONAPP_PACKAGE_PATH: '.'
   PYTHON_VERSION: '3.11'
 
 
@@ -19,55 +17,42 @@ jobs:
 
     runs-on: ubuntu-latest
 
-    permissions:
-      contents: read
-
-
     steps:
 
-      - name: Checkout repository
-        uses: actions/checkout@v4
+    - name: Checkout
+      uses: actions/checkout@v4
 
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
 
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt --target=".python_packages/lib/site-packages"
 
 
-      - name: Validate Function App structure
-        run: |
-          echo "Checking files..."
-          ls -la
-
-          test -f function_app.py
-          test -f host.json
-          test -f requirements.txt
-
-          echo "Function App files found"
+    - name: Verify files
+      run: |
+        ls -la
+        ls -la .python_packages/lib/site-packages
 
 
-      - name: Create deployment package
-        run: |
-          zip release.zip ./* -r \
-          -x ".git/*" \
-          -x ".github/*" \
-          -x "venv/*" \
-          -x ".venv/*" \
-          -x "__pycache__/*"
+    - name: Create package
+      run: |
+        zip -r release.zip . \
+        -x "*.git*" \
+        -x ".venv/*"
 
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: python-app
-          path: release.zip
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: function-package
+        path: release.zip
 
 
 
@@ -80,36 +65,19 @@ jobs:
 
     steps:
 
-      - name: Download artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: python-app
+    - name: Download artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: function-package
 
 
-      - name: Extract artifact
-        run: |
-          unzip release.zip
-          rm release.zip
-
-          echo "Deployment contents:"
-          ls -la
+    - name: Extract
+      run: unzip release.zip
 
 
-      - name: Deploy to Azure Functions
-        uses: Azure/functions-action@v1
-
-        with:
-
-          app-name: 'infobric-headcount-monitor'
-
-          slot-name: 'Production'
-
-          package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
-
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_A95301DC4A2C4B2C82E688110C3F95DB }}
-
-          sku: 'flexconsumption'
-
-          scm-do-build-during-deployment: true
-
-          enable-oryx-build: true
+    - name: Deploy Function App
+      uses: Azure/functions-action@v1
+      with:
+        app-name: infobric-headcount-monitor
+        package: .
+        publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_A95301DC4A2C4B2C82E688110C3F95DB }}

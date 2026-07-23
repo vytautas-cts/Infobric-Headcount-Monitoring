@@ -70,8 +70,8 @@ def main():
     with open(CACHE_FILE, "w", encoding="utf-8") as f:
         f.write(cache.serialize())
 
-    print("✓ Authentication successful.")
-    print(f"✓ Token cache saved to {CACHE_FILE}")
+    print("Authentication successful.")
+    print(f"Token cache saved to {CACHE_FILE}")
 
 
 if __name__ == "__main__":
