@@ -37,15 +37,22 @@ jobs:
 
     - name: Verify files
       run: |
+        echo "Project files:"
         ls -la
+
+        echo "Python packages:"
         ls -la .python_packages/lib/site-packages
 
 
-    - name: Create package
+    - name: Create deployment package
       run: |
         zip -r release.zip . \
         -x "*.git*" \
-        -x ".venv/*"
+        -x ".git/*" \
+        -x ".venv/*" \
+        -x "local.settings.json" \
+        -x "__pycache__/*" \
+        -x "*.pyc"
 
 
     - name: Upload artifact
@@ -71,13 +78,19 @@ jobs:
         name: function-package
 
 
-    - name: Extract
-      run: unzip release.zip
+    - name: Extract package
+      run: |
+        unzip release.zip
 
 
-    - name: Deploy Function App
+    - name: Azure Login
+      uses: azure/login@v2
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+
+    - name: Deploy Azure Function
       uses: Azure/functions-action@v1
       with:
         app-name: infobric-headcount-monitor
         package: .
-        publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_A95301DC4A2C4B2C82E688110C3F95DB }}
