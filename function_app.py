@@ -26,21 +26,27 @@ app = func.FunctionApp()
     run_on_startup=True,   # TEMPORARY: run immediately after startup
     use_monitor=True
 )
-def infobric_headcount_monitor(timer: func.TimerRequest) -> None:
+async def infobric_headcount_monitor(
+    timer: func.TimerRequest
+) -> None:
     """
     Azure Timer Trigger.
 
     Runs every 5 minutes.
     """
 
+
     logging.warning(
         "========== INFOBRIC TIMER TRIGGER FIRED =========="
     )
 
+
     if timer.past_due:
+
         logging.warning(
             "Timer is running late."
         )
+
 
     try:
 
@@ -48,11 +54,14 @@ def infobric_headcount_monitor(timer: func.TimerRequest) -> None:
             "Starting Infobric headcount monitor..."
         )
 
-        run_monitor()
+
+        await run_monitor()
+
 
         logging.warning(
             "Infobric headcount monitor completed successfully."
         )
+
 
     except Exception:
 

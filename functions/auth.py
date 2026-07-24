@@ -42,14 +42,20 @@ from functions.config import (
 # Session validation
 # --------------------------------------------------
 
-def infobric_session_valid():
+async def infobric_session_valid():
+    """
+    Check if existing Infobric storage state
+    is still authenticated.
+    """
 
     if not os.path.exists(INFOBRIC_STATE):
         return False
 
-    context = create_context(
+
+    context = await create_context(
         storage_state=INFOBRIC_STATE
     )
+
 
     try:
 
@@ -58,109 +64,131 @@ def infobric_session_valid():
             "siteTimeZone": TIMEZONE
         }
 
-        response = context.request.post(
+
+        response = await context.request.post(
             INFOBRIC_URL,
             data=payload
         )
 
+
         return response.status == 200
+
 
     except Exception:
 
         return False
 
+
     finally:
 
-        context.close()
+        await context.close()
+
 
 
 # --------------------------------------------------
 # Automatic login
 # --------------------------------------------------
 
-def login_infobric():
+async def login_infobric():
     """
-    Authenticate to Infobric using the service
-    account stored in the .env file.
-
-    NOTE:
-    The selectors below must match the Infobric
-    login page.
+    Authenticate to Infobric using service account.
     """
 
-    browser = get_browser()
-
-    context = create_context()
-
-    page = context.new_page()
-
-    page.goto(INFOBRIC_LOGIN)
+    await get_browser()
 
 
-    page.fill(
-    "#txtUserNameLogin",
-    INFOBRIC_USERNAME
+    context = await create_context()
+
+
+    page = await context.new_page()
+
+
+    await page.goto(
+        INFOBRIC_LOGIN
     )
 
-    page.fill(
-    "#txtPassword_txtPassword",
-    INFOBRIC_PASSWORD
+
+    await page.fill(
+        "#txtUserNameLogin",
+        INFOBRIC_USERNAME
     )
 
-    page.click(
+
+    await page.fill(
+        "#txtPassword_txtPassword",
+        INFOBRIC_PASSWORD
+    )
+
+
+    await page.click(
         "#btnLoginWithUserName"
     )
 
-    page.wait_for_load_state("networkidle")
 
-    page.wait_for_timeout(3000)
+    await page.wait_for_load_state(
+        "networkidle"
+    )
 
-    context.storage_state(
+
+    await page.wait_for_timeout(
+        3000
+    )
+
+
+    await context.storage_state(
         path=INFOBRIC_STATE
     )
 
-    context.close()
+
+    await context.close()
+
 
     print("Infobric session saved.")
+
 
 
 # --------------------------------------------------
 # Public API
 # --------------------------------------------------
 
-def ensure_logins():
+async def ensure_logins():
 
     print("Checking Infobric session...")
 
-    if infobric_session_valid():
+
+    if await infobric_session_valid():
 
         print("Infobric session valid")
+
 
     else:
 
         print("Infobric login required")
 
-        login_infobric()
+        await login_infobric()
 
 
-def create_infobric_context():
+
+async def create_infobric_context():
     """
-    Create an authenticated Infobric browser
-    context.
+    Create authenticated Infobric browser context.
     """
 
-    return create_context(
+    return await create_context(
         storage_state=INFOBRIC_STATE
     )
 
 
-def refresh_infobric_context(old_context):
+
+async def refresh_infobric_context(old_context):
     """
-    Refresh the Infobric session.
+    Refresh Infobric session.
     """
 
-    old_context.close()
+    await old_context.close()
 
-    login_infobric()
 
-    return create_infobric_context()
+    await login_infobric()
+
+
+    return await create_infobric_context()

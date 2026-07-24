@@ -1,0 +1,13 @@
+.git/
+.github/
+.vscode/
+
+.venv/
+__pycache__/
+*.pyc
+
+.env
+local.settings.json
+
+states/*.json
+states/*.bin

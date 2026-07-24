@@ -1,4 +1,5 @@
 from functions.config import INFOBRIC_URL, TIMEZONE
+
 from functions.exceptions import (
     SessionExpired,
     InfobricError,
@@ -6,12 +7,13 @@ from functions.exceptions import (
 )
 
 
-def get_headcount(context, site):
+async def get_headcount(context, site):
 
     payload = {
         "siteID": site["infobric_site_id"],
         "siteTimeZone": TIMEZONE
     }
+
 
     #
     # Contact Infobric
@@ -19,17 +21,20 @@ def get_headcount(context, site):
 
     try:
 
-        response = context.request.post(
+        response = await context.request.post(
             INFOBRIC_URL,
             data=payload,
             timeout=10000
         )
+
 
     except Exception as e:
 
         raise NetworkError(
             f"Unable to contact Infobric.\n{e}"
         )
+
+
 
     #
     # Authentication expired
@@ -40,6 +45,8 @@ def get_headcount(context, site):
         raise SessionExpired(
             "Infobric session has expired."
         )
+
+
 
     #
     # Temporary server problems
@@ -52,6 +59,8 @@ def get_headcount(context, site):
             f"(HTTP {response.status})"
         )
 
+
+
     #
     # Unexpected response
     #
@@ -63,19 +72,24 @@ def get_headcount(context, site):
             f"(HTTP {response.status})"
         )
 
+
+
     #
     # Parse JSON
     #
 
     try:
 
-        data = response.json()
+        data = await response.json()
+
 
     except Exception:
 
         raise InfobricError(
             "Infobric returned invalid JSON."
         )
+
+
 
     #
     # Extract headcount
@@ -88,6 +102,7 @@ def get_headcount(context, site):
             for item in data["d"]
             if item["Presence"] == 0
         )
+
 
     except (KeyError, StopIteration):
 
