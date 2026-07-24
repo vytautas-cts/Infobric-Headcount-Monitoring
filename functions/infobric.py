@@ -1,4 +1,17 @@
-from functions.config import INFOBRIC_URL, TIMEZONE
+"""
+---------------------------------------------------
+Infobric Headcount Retrieval
+
+Uses authenticated requests session.
+No browser required.
+
+---------------------------------------------------
+"""
+
+from functions.config import (
+    INFOBRIC_URL,
+    TIMEZONE
+)
 
 from functions.exceptions import (
     SessionExpired,
@@ -7,7 +20,7 @@ from functions.exceptions import (
 )
 
 
-async def get_headcount(context, site):
+def get_headcount(session, site):
 
     payload = {
         "siteID": site["infobric_site_id"],
@@ -21,10 +34,10 @@ async def get_headcount(context, site):
 
     try:
 
-        response = await context.request.post(
+        response = session.post(
             INFOBRIC_URL,
-            data=payload,
-            timeout=10000
+            json=payload,
+            timeout=10
         )
 
 
@@ -35,43 +48,39 @@ async def get_headcount(context, site):
         )
 
 
-
     #
     # Authentication expired
     #
 
-    if response.status in (401, 403):
+    if response.status_code in (401, 403):
 
         raise SessionExpired(
             "Infobric session has expired."
         )
 
 
-
     #
     # Temporary server problems
     #
 
-    if response.status >= 500:
+    if response.status_code >= 500:
 
         raise NetworkError(
             f"Infobric server unavailable "
-            f"(HTTP {response.status})"
+            f"(HTTP {response.status_code})"
         )
-
 
 
     #
     # Unexpected response
     #
 
-    if response.status != 200:
+    if response.status_code != 200:
 
         raise InfobricError(
             f"Infobric request failed "
-            f"(HTTP {response.status})"
+            f"(HTTP {response.status_code})"
         )
-
 
 
     #
@@ -80,7 +89,7 @@ async def get_headcount(context, site):
 
     try:
 
-        data = await response.json()
+        data = response.json()
 
 
     except Exception:
@@ -88,7 +97,6 @@ async def get_headcount(context, site):
         raise InfobricError(
             "Infobric returned invalid JSON."
         )
-
 
 
     #

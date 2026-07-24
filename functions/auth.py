@@ -1,194 +1,182 @@
 """
 ---------------------------------------------------
-Authentication
+Infobric Authentication (requests based)
 
-Author: Vytautas Labanauskas
-
-Purpose:
-Manages authentication for Infobric.
-
-Responsibilities
-
-- Validate saved Infobric session.
-- Authenticate when required.
-- Create authenticated browser contexts.
-- Refresh sessions automatically.
-
-SharePoint authentication is handled separately
-by Microsoft Entra in sharepoint_auth.py.
-
+No browser required.
+Uses ASP.NET authentication cookies.
 ---------------------------------------------------
 """
 
 import os
-
-from functions.playwright_manager import (
-    get_browser,
-    create_context
-)
+import json
+import requests
+from bs4 import BeautifulSoup
 
 from functions.config import (
     INFOBRIC_LOGIN,
-    INFOBRIC_URL,
     INFOBRIC_STATE,
-    TIMEZONE,
-    SITES,
     INFOBRIC_USERNAME,
     INFOBRIC_PASSWORD
 )
 
 
-# --------------------------------------------------
-# Session validation
-# --------------------------------------------------
+_session = None
 
-async def infobric_session_valid():
-    """
-    Check if existing Infobric storage state
-    is still authenticated.
-    """
+
+def save_session(session):
+
+    cookies = {}
+
+    for cookie in session.cookies:
+        cookies[cookie.name] = cookie.value
+
+    os.makedirs(
+        os.path.dirname(INFOBRIC_STATE),
+        exist_ok=True
+    )
+
+    with open(INFOBRIC_STATE, "w") as f:
+        json.dump(cookies, f)
+
+
+def load_session():
 
     if not os.path.exists(INFOBRIC_STATE):
-        return False
+        return None
+
+    with open(INFOBRIC_STATE) as f:
+        cookies = json.load(f)
+
+    session = requests.Session()
+
+    for name, value in cookies.items():
+        session.cookies.set(
+            name,
+            value,
+            domain="site.infobric.com"
+        )
+
+    return session
 
 
-    context = await create_context(
-        storage_state=INFOBRIC_STATE
+def login_infobric():
+
+    print("Logging into Infobric...")
+
+    session = requests.Session()
+
+    login_url = (
+        "https://site.infobric.com/"
+        "Login.aspx?ReturnUrl=%2fSettings%2f"
     )
 
 
-    try:
+    # Get login page first
 
-        payload = {
-            "siteID": SITES[0]["infobric_site_id"],
-            "siteTimeZone": TIMEZONE
-        }
+    response = session.get(login_url)
 
-
-        response = await context.request.post(
-            INFOBRIC_URL,
-            data=payload
+    if response.status_code != 200:
+        raise Exception(
+            "Could not open Infobric login page"
         )
 
 
-        return response.status == 200
-
-
-    except Exception:
-
-        return False
-
-
-    finally:
-
-        await context.close()
-
-
-
-# --------------------------------------------------
-# Automatic login
-# --------------------------------------------------
-
-async def login_infobric():
-    """
-    Authenticate to Infobric using service account.
-    """
-
-    await get_browser()
-
-
-    context = await create_context()
-
-
-    page = await context.new_page()
-
-
-    await page.goto(
-        INFOBRIC_LOGIN
+    soup = BeautifulSoup(
+        response.text,
+        "html.parser"
     )
 
 
-    await page.fill(
-        "#txtUserNameLogin",
-        INFOBRIC_USERNAME
+    payload = {}
+
+
+    # ASP.NET hidden fields
+
+    for field in soup.find_all(
+        "input",
+        type="hidden"
+    ):
+
+        if field.get("name"):
+            payload[field["name"]] = field.get(
+                "value",
+                ""
+            )
+
+
+    # Your selectors revealed these names
+
+    payload.update(
+        {
+            "txtUserNameLogin": INFOBRIC_USERNAME,
+            "txtPassword_txtPassword": INFOBRIC_PASSWORD,
+            "btnLoginWithUserName": "Login"
+        }
     )
 
 
-    await page.fill(
-        "#txtPassword_txtPassword",
-        INFOBRIC_PASSWORD
+    response = session.post(
+        login_url,
+        data=payload,
+        allow_redirects=False
     )
 
 
-    await page.click(
-        "#btnLoginWithUserName"
+    if response.status_code != 302:
+
+        raise Exception(
+            "Infobric login failed"
+        )
+
+
+    if ".ASPXAUTH" not in session.cookies:
+
+        raise Exception(
+            "Authentication cookie not received"
+        )
+
+
+    save_session(session)
+
+
+    print(
+        "Infobric login successful."
     )
 
 
-    await page.wait_for_load_state(
-        "networkidle"
-    )
-
-
-    await page.wait_for_timeout(
-        3000
-    )
-
-
-    await context.storage_state(
-        path=INFOBRIC_STATE
-    )
-
-
-    await context.close()
-
-
-    print("Infobric session saved.")
+    return session
 
 
 
-# --------------------------------------------------
-# Public API
-# --------------------------------------------------
+def ensure_logins():
 
-async def ensure_logins():
-
-    print("Checking Infobric session...")
+    global _session
 
 
-    if await infobric_session_valid():
-
-        print("Infobric session valid")
-
-
-    else:
-
-        print("Infobric login required")
-
-        await login_infobric()
+    if _session:
+        return
 
 
+    _session = load_session()
 
-async def create_infobric_context():
-    """
-    Create authenticated Infobric browser context.
-    """
 
-    return await create_context(
-        storage_state=INFOBRIC_STATE
-    )
+    if _session:
+
+        print(
+            "Testing saved Infobric session..."
+        )
+
+        return
+
+
+    _session = login_infobric()
 
 
 
-async def refresh_infobric_context(old_context):
-    """
-    Refresh Infobric session.
-    """
+def get_session():
 
-    await old_context.close()
+    global _session
 
+    ensure_logins()
 
-    await login_infobric()
-
-
-    return await create_infobric_context()
+    return _session
