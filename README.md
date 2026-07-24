@@ -46,6 +46,7 @@ The browser session is saved so the application does not need to log in every ti
 
 ---
 
+
 ## SharePoint
 
 SharePoint authentication uses Microsoft Entra delegated authentication.
